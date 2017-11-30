@@ -226,13 +226,39 @@
 .pit-plugin--pointer{
     cursor: pointer;
 }
+.pit-plugin--action-history-parent-id{
+   width: 3em;
+   height: 1.5em;
+   background-color: red;
+   font-weight: bold;
+   display: flex;
+   justify-content: flex-end;
+   align-items: center;
+   color: white;
+   padding-right: 5px;
+   margin-left: 5px;
+}
+.pit-plugin--action-history-parent-id.orphan{
+   opacity: 0;
+}
+.pit-plugin--action-history-action-id{
+   width: 3em;
+   height: 1.5em;
+   background-color: grey;
+   font-weight: bold;
+   display: flex;
+   align-items: center;
+   color: white;
+   padding-left: 5px;
+   margin-right: 5px;
+}
 .pit-plugin--action-history-element{
-    display: flex;
-    background-color: rgb(239, 237, 237);
-    color: #666;
-    border-radius: 5;
-    margin: 5px 10px;
-    padding: 5px 10px;
+   display: flex;
+   align-items: center;
+   background-color: rgb(239, 237, 237);
+   color: #666;
+   border-radius: 5;
+   margin: 5px 10px;
 }
 .pit-plugin--action-history-time{
     width: 8em;

@@ -7,6 +7,7 @@
 
 ;; Atom
 (defonce actions-list (atom {:actions-history []}))
+(defonce actions-id (atom 0))
 
 ;; Helper - Set Ctrl-Shift-A
 (defn set-key-down-document! [state]
@@ -51,7 +52,7 @@
 ;; Helpers
 (defn atom? [x]
   (= cljs.core/Atom (type x)))
-(defn- pop-actions-list [action-name params]
+(defn- pop-actions-list [action-name params parent-id action-id]
   (let [date (js/Date.)
         h (.getHours date)
         h (str (when (< h 10) 0) h)
@@ -61,67 +62,71 @@
         s (str (when (< s 10) 0) s)
         infos {:time (str h ":" m ":" s)
                :name (name action-name)
+               :action-id action-id
+               :parent-id parent-id
                :params params}]
     (swap! actions-list update :actions-history
            #(vec (take 50 (concat [infos] %))))))
 
 ;; Multimethods
 (defmulti apply-action
-  (fn [_ action-name & params]
+  (fn [parent-id action-id _ action-name & params]
     (when-not (get-in @actions-list [:actions action-name :silent])
-      (pop-actions-list action-name params))
+      (pop-actions-list action-name params parent-id action-id))
     action-name))
 (defmethod apply-action nil
-  [m & _]
+  [_ _ m & _]
   m)
 (defmethod apply-action :default
-  [m action-name & body]
+  [_ _ m action-name & body]
   (println "/!\\ Cannot find action \"" action-name "\"\nYou can define it with the function (defaction" action-name "[m] (...))")
   m)
 (defmulti apply-action!
-  (fn [_ action-name & params]
+  (fn [parent-id action-id _ action-name & params]
     (when-not (get-in @actions-list [:actions (keyword (str (name action-name) " !")) :silent])
-      (pop-actions-list (keyword (str (name action-name) " !")) params))
+      (pop-actions-list (keyword (str (name action-name) " !")) params parent-id action-id))
     action-name))
 (defmethod apply-action! nil
   [& _])
 (defmethod apply-action! :default
-  [_ action-name & _]
+  [_ _ _ action-name & _]
   (println "/!\\ Cannot find side-effect action \"" action-name "\"\nYou can define it with the function (defaction!" action-name "[m] (...))"))
 
 ;; Dispatch!
-(defn -dispatch! [state & params]
-  (let [indexed-params (map-indexed vector params)
-        partitioning (fn [[index item]] (if (or (keyword? item)
-                                                (and (coll? item)
-                                                     (not= (keyword "   !") (first item))))
-                                          -1
-                                          index))
-        partitioned-params (partition-by partitioning indexed-params)
-        mapped-params (map (fn [x]
-                             (let [remove-index (map second x)
-                                   remove-bang (map (fn [y] (if (or (keyword? y)
-                                                                    (not= (keyword "   !") (first y)))
-                                                              y
-                                                              (vec (rest y))))
-                                                    remove-index)]
-                               (vec (concat
-                                      [(if (= -1 (partitioning (first x))) :normal :side-effect)]
-                                      (map second x)))))
-                           partitioned-params)
-        instructions (map (fn [x]
-                            (if (= :side-effect (first x))
-                              [:side-effect (vec (rest (second x)))]
-                              x))
-                          mapped-params)
-        reducer (fn [m actions]
-                  (reduce (fn [local-state action]
-                            (if (coll? action)
-                              (apply apply-action local-state action)
-                              (apply-action local-state action)))
-                          m
-                          actions))]
-    (if (atom? state)
+(defn -dispatch! [parent-id state & params]
+  (if (atom? parent-id)
+    (apply -dispatch! nil parent-id state params)
+    (let [indexed-params (map-indexed vector params)
+          partitioning (fn [[index item]] (if (or (keyword? item)
+                                                  (and (coll? item)
+                                                       (not= (keyword "   !") (first item))))
+                                            -1
+                                            index))
+          partitioned-params (partition-by partitioning indexed-params)
+          mapped-params (map (fn [x]
+                               (let [remove-index (map second x)
+                                     remove-bang (map (fn [y] (if (or (keyword? y)
+                                                                      (not= (keyword "   !") (first y)))
+                                                                y
+                                                                (vec (rest y))))
+                                                      remove-index)]
+                                 (vec (concat
+                                        [(if (= -1 (partitioning (first x))) :normal :side-effect)]
+                                        (map second x)))))
+                             partitioned-params)
+          instructions (map (fn [x]
+                              (if (= :side-effect (first x))
+                                [:side-effect (vec (rest (second x)))]
+                                x))
+                            mapped-params)
+          reducer (fn [m actions]
+                    (reduce (fn [local-state action]
+                              (let [action-id (swap! actions-id inc)]
+                                (if (coll? action)
+                                  (apply apply-action parent-id action-id local-state action)
+                                  (apply-action parent-id action-id local-state action))))
+                            m
+                            actions))]
       (doseq [instruction instructions]
         (let [type-action (first instruction)
               actions (rest instruction)]
@@ -129,10 +134,10 @@
           (if (= :normal type-action)
             (swap! state #(reducer % actions))
             (doseq [action actions]
-              (if (coll? action)
-                (apply apply-action! state action)
-                (apply-action! state action))))))
-      (reducer state (rest (first instructions))))))
+              (let [action-id (swap! actions-id inc)]
+                (if (coll? action)
+                  (apply apply-action! parent-id action-id state action)
+                  (apply-action! parent-id action-id state action))))))))))
 
 ;; Functions - Remove-action
 (defn remove-action [action-name]

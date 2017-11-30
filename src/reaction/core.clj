@@ -2,11 +2,13 @@
   (:require [clojure.walk :refer [postwalk]]))
 
 ;; Macro - Dispatch!
-(defmacro dispatch! [state & args]
+(defn -dispatch! [state & args]
   (let [params args
         final-params (postwalk #(if (= '! %) (keyword "   !") %)
                                args)]
     `(reaction.core/-dispatch! ~state ~@final-params)))
+(defmacro dispatch! [& args]
+  (apply -dispatch! args))
 
 ;; Defaction
 (defn -defaction [action-infos bang? action-name & body]
@@ -20,9 +22,14 @@
         body (if (map? (first body)) (rest body) body)
 
         in-coll? (list? (first body))
+        let-params (vec (concat ['reaction fn-name]
+                                (if (not bang?)
+                                    ['dispatch! `(fn [& ~'_] (throw "Cannot use a dispatch! on an action, please use an action!"))]
+                                    ['dispatch! `(fn [& ~'rest] (apply -dispatch! ~'parent-id ~'rest))
+                                     '! (keyword "   !")])))
         body (if in-coll? body (list body))
         body (map (fn [[params & rest-body]]
-                    (list params `(let [~'reaction ~fn-name]
+                    (list (into ['parent-id] params) `(let ~let-params
                                     ~@rest-body)))
                   body)
 
@@ -40,16 +47,15 @@
         action-line (:line action-infos)
         silent? (get options :silent false)]
     `(do
-       (declare ~'xxx)
-       (println "-->" ~'xxx)
-       (when (not ~'xxx)
-         (def ~'xxx true)
-         (swap! actions-list
-                update :actions
-                #(->> %
-                      (filter (fn [[~'k ~'v]]
-                                (= (get ~'v :namespace) ~action-ns)))
-                      (into {}))))
+       ;; (declare ~'xxx)
+       ;; (when (not ~'xxx)
+       ;;   (def ~'xxx true)
+       ;;   (swap! actions-list
+       ;;          update :actions
+       ;;          #(->> %
+       ;;                (filter (fn [[~'k ~'v]]
+       ;;                          (= (get ~'v :namespace) ~action-ns)))
+       ;;                (into {}))))
        (swap! actions-list
               update-in [:actions ~action-list-key]
               #(merge %
@@ -60,9 +66,8 @@
                        :documentation ~doc-string}))
        (defn ~fn-name ~@body)
        (defmethod ~defmulti-key ~(keyword action-name)
-         [& ~'params]
-         (apply ~fn-name (keep-indexed #(when (not= 1 %1) %2)
-                                       ~'params))))))
+         [~'parent-id ~'action-id ~'state ~'_ & ~'params]
+         (apply ~fn-name ~'action-id ~'state ~'params)))))
 
 ;; Macros - Defaction
 (defmacro defaction! [& params]

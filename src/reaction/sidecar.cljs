@@ -168,13 +168,18 @@
                    (let [action-name (:name action)
                          action-time (:time action)
                          action-params (:params action)
+                         parent-id (:parent-id action)
+                         action-id (:action-id action)
                          expanded? (get action :expanded? false)]
-                     [:div.pit-plugin--pointer{:on-click #(swap! state update-in [:actions-history index :expanded?] not)}
+                     [:div.pit-plugin--pointer {:on-click #(swap! state update-in [:actions-history index :expanded?] not)}
                       [:div.pit-plugin--action-history-element
+                       [:div.pit-plugin--action-history-action-id action-id]
                        [:div.pit-plugin--action-history-time action-time]
                        [:div action-name]
                        [:div.pit-plugin--action-history-params
-                        "[" (count action-params) "]"]]
+                        "[" (count action-params) "]"]
+                       [:div {:style {:flex 1}}]
+                       [:div.pit-plugin--action-history-parent-id {:class (when (not parent-id) "orphan")} parent-id]]
                       (when expanded?
                         [:div (if (empty? action-params)
                                 [:div "No parameters to this action"]
