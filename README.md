@@ -5,7 +5,7 @@ Reaction is a library to manage and dispatch actions.
 
 It is based around the Atom principle of ClojureScript.
 
-Please add `[reaction "0.1.0"]` to your `project.clj` to use it.
+Please add `[reaction "0.1.2"]` to your `project.clj` to use it.
 
 It provides a visual interface to display the actions list/history.
 
@@ -41,7 +41,7 @@ An **action!** is a function used to **dispatch** actions(!) in an asynchronous 
   "Dispatches [:test-action] after 1s"
   [state]
   (.setTimeout js/window
-               #(dispatch state [:test-acion])
+               #(dispatch! state [:test-action])
                1000))
 ```
 
