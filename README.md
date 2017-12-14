@@ -17,7 +17,7 @@ An **action** is a modification that will be apply to an atom (The same way you'
 
 ```clojure
 (ns whatever.core
-  (:require [reaction :refer-macros [defaction]]))
+  (:require [reaction.core :refer-macros [defaction]]))
 
 (defaction test-action
   "Increments the counter of 1"
@@ -30,7 +30,7 @@ An **action!** is a function used to **dispatch** actions(!) in an asynchronous 
 
 ```clojure
 (ns whatever.core
-  (:require [reaction :refer-macros [defaction defaction! dispatch!]]))
+  (:require [reaction.core :refer-macros [defaction defaction! dispatch!]]))
 
 (defaction test-action
   "Increments the counter of 1"
@@ -51,7 +51,7 @@ You can use `reaction` to recur on the action/action!
 (*Note*: no need to refer `reaction`)
 ```clojure
 (ns whatever.core
-  (:require [reaction :refer-macros [defaction]]))
+  (:require [reaction.core :refer-macros [defaction]]))
 
 (defaction increment
   ([m]
@@ -65,7 +65,7 @@ You can use `reaction` to recur on the action/action!
 
 ```clojure
 (ns whatever.core
-  (:require [reaction :refer-macros [defaction defaction! dispatch!]]))
+  (:require [reaction.core :refer-macros [defaction defaction! dispatch!]]))
 
 (dispatch state
           [:test-action]
@@ -79,7 +79,7 @@ You can use `reaction` to recur on the action/action!
 
 ```clojure
 (ns whatever.core
-  (:require [reaction :refer [bind-actions-list]]))
+  (:require [reaction.core :refer [bind-actions-list]]))
 
 (bind-actions-list)
 ```
