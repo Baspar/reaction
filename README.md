@@ -67,11 +67,11 @@ You can use `reaction` to recur on the action/action!
 (ns whatever.core
   (:require [reaction.core :refer-macros [defaction defaction! dispatch!]]))
 
-(dispatch state
-          [:test-action]
-          :test-action
-          [:increment 1]
-          [! :test-action])
+(dispatch! state
+           [:test-action]
+           :test-action
+           [:increment 1]
+           [! :test-action])
 ```
 
 ### Bind graphical sidecars: `bind-actions-list`
